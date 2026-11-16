@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+ <meta charset="utf-8" />
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+ <meta name="theme-color" content="#10171a" />
+ <meta name="apple-mobile-web-app-capable" content="yes" />
+ <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+ <meta name="apple-mobile-web-app-title" content="Atlas Westeros" />
+ <meta name="description" content="Retratos literários de Westeros, organizados por livro e capítulo, sem spoilers futuros." />
+ <link rel="icon" href="icon-192.png" />
+ <link rel="apple-touch-icon" href="icon-192.png" />
+ <link rel="manifest" href="manifest.webmanifest" />
+ <link rel="stylesheet" href="style.css" />
+ <title>Atlas de Westeros</title>
+ <script src="data.js" defer></script><script src="catalog.js" defer></script><script src="chapters.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+ <div id="app" class="app">
+  <header class="topbar"><div class="brand"><div class="brand-icon" aria-hidden="true">W</div><div><div class="eyebrow">AS CRÔNICAS DE GELO E FOGO</div><div class="brand-name">Atlas de Westeros</div></div></div><button id="manageBtn" class="icon-btn" aria-label="Gerenciar personagens" title="Gerenciar">⚙</button></header>
+  <main>
+    <div class="intro-header"><p class="micro">RETRATOS DA OBRA LITERÁRIA</p><h1>Conheça quem habita<br><em>cada capítulo.</em></h1><p class="intro-text">67 retratos do seu acervo, organizados por livro e capítulo — com fichas que respeitam o ponto da leitura.</p></div>
+    <section class="reading-panel" aria-label="Sua leitura"><div class="section-label">MINHA LEITURA <span class="save-indicator" id="saveIndicator">progresso salvo no aparelho</span></div>
+      <label class="field-label" for="bookSelect">Livro</label><select id="bookSelect" class="book-select"></select>
+      <div class="chap-row"><button id="prevBtn" class="stepper" aria-label="Capítulo anterior">‹</button><div class="chapter-container"><label class="field-label" for="chapterSelect">Capítulo atual</label><select id="chapterSelect"></select></div><button id="nextBtn" class="stepper" aria-label="Próximo capítulo">›</button></div>
+      <div class="reading-meta"><span id="chapterCaption">Prólogo</span><span id="chapterCounter">01 / 73</span></div>
+      <div class="progress-track"><div id="progressFill"></div></div><label class="chapter-finished"><input id="finishedToggle" type="checkbox" /> <span>Já terminei este capítulo</span></label><p class="spoiler-notice" id="spoilerNotice"></p>
+    </section>
+    <section class="directory"><div class="directory-top"><div><p class="micro">GALERIA LITERÁRIA</p><h2 id="directoryTitle">Personagens</h2></div><span class="count" id="characterCount">0</span></div>
+      <div class="mode-switch" role="group" aria-label="Filtro da galeria"><button id="sceneMode" class="active" aria-pressed="true">Neste capítulo</button><button id="knownMode" aria-pressed="false">Conhecidos até aqui</button><button id="allMode" aria-pressed="false">Todos os retratos</button></div>
+      <div id="sceneSubtabs" class="scene-subtabs" role="group" aria-label="Tipo de participação no capítulo"><button type="button" id="showPresent" class="selected" aria-pressed="true">Em cena <span class="tab-counter" id="presentCount">0</span></button><button type="button" id="showMentions" aria-pressed="false">Citados <span class="tab-counter" id="mentionCount">0</span></button></div>
+      <label class="search-wrap"><span aria-hidden="true">⌕</span><input id="searchInput" placeholder="Buscar personagem ou casa..." autocomplete="off" aria-label="Buscar personagem" /></label>
+      <div class="toolbar"><span id="curationNotice">Catálogo inicial: algumas cenas ainda não estão marcadas.</span><button id="addQuick" class="text-action hidden">+ Adicionar</button></div>
+      <div id="gallery" class="gallery" aria-live="polite"></div><div id="unpictured" class="unpictured hidden"></div><p id="castFootnote" class="cast-footnote hidden"></p>
+    </section>
+    <p class="footer-quote">“O inverno está chegando.” <span>— Casa Stark</span></p>
+  </main>
+  <footer class="site-footer">UM ATLAS PARTICULAR · V6 · LIVROS I–II REVISADOS</footer>
+ </div>
+ <div class="overlay hidden" id="viewOverlay" role="dialog" aria-modal="true" aria-labelledby="viewTitle"><div class="dialog view-dialog"><button class="close-dialog" id="viewClose" aria-label="Fechar">×</button><div id="viewInner"></div></div></div>
+ <div class="overlay hidden" id="editOverlay" role="dialog" aria-modal="true" aria-labelledby="editDialogTitle"><div class="dialog edit-dialog"><button class="close-dialog" id="editClose" aria-label="Fechar">×</button><div class="dialog-heading"><span class="micro">BIBLIOTECA PARTICULAR</span><h2 id="editDialogTitle">Editar personagem</h2></div>
+   <form id="characterForm">
+     <label>Nome<input id="fName" required maxlength="100" placeholder="Ex.: Brienne de Tarth" /></label>
+     <div class="two-cols"><label>Família / casa<input id="fHouse" maxlength="90" placeholder="Ex.: Casa Stark" /></label><label>Idade nesta fase<input id="fAge" maxlength="60" placeholder="Ex.: 14 anos / não informada" /></label></div><label>Função / posição<input id="fRole" maxlength="100" placeholder="Ex.: Escudeiro, senhora de Winterfell..." /></label><label>Aparência segundo os livros<textarea id="fAppearance" maxlength="400" rows="2" placeholder="Traços físicos descritos na obra, sem atores da série."></textarea></label>
+     <label>Informações breves, sem spoilers<textarea id="fNote" rows="3" maxlength="500" placeholder="Quem é este personagem neste ponto da história?"></textarea></label>
+     <div class="two-cols"><label>Liberar ficha a partir de — livro<select id="fIntroBook"></select></label><label>Liberar ficha a partir de — capítulo<select id="fIntroChap"></select></label></div>
+     <label class="check-line"><input type="checkbox" id="fScene" /> <span>Aparece no capítulo selecionado</span></label>
+     <label class="check-line"><input type="checkbox" id="fNewPhase" /> <span>Salvar idade, casa e descrição como nova fase a partir deste capítulo (sem alterar as fases anteriores)</span></label>
+     <label class="upload-zone"><span>Adicionar ou substituir retrato literário</span><small>JPG, PNG, HEIC (se compatível) • reduzido automaticamente para economizar espaço</small><input type="file" id="fImage" accept="image/*" /></label>
+     <div class="form-actions"><button type="button" class="danger-action hidden" id="deleteCharacter">Excluir</button><button type="submit" class="primary-action">Salvar personagem</button></div>
+   </form>
+ </div></div>
+ <div class="overlay hidden" id="manageOverlay" role="dialog" aria-modal="true" aria-labelledby="manageTitle"><div class="dialog manage-dialog"><button class="close-dialog" id="manageClose" aria-label="Fechar">×</button><div class="dialog-heading"><span class="micro">ADMINISTRAÇÃO DO ATLAS</span><h2 id="manageTitle">Sua biblioteca</h2></div><p class="muted">Os 67 retratos originais já estão incluídos no aplicativo. Somente as alterações feitas por você ficam guardadas neste aparelho.</p><div class="admin-actions"><button id="newCharacter" class="primary-action">+ Novo personagem</button><button id="exportBtn" class="secondary-action">Exportar backup</button><label class="secondary-action file-button">Importar backup<input type="file" accept=".json,application/json" id="importFile" /></label></div><div class="notice"><strong>Atenção:</strong> instale primeiro na Tela de Início e depois adicione os retratos. Os dados do Safari e os do app instalado podem ser separados. As aparições por capítulo estão em curadoria; as listas parciais são sinalizadas. O backup permite transferir sua coleção.</div><h3>Personagens cadastrados</h3><p class="muted" id="manageNotice"></p><div class="manage-list" id="manageList"></div><button id="resetData" class="danger-link">Restaurar acervo original</button></div></div>
+ <div class="toast hidden" id="toast" role="status"></div>
+</body>
+</html>

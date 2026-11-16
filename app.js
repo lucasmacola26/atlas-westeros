@@ -4,6 +4,12 @@ const $=id=>document.getElementById(id);
 const BOOKS=window.ATLAS_BOOKS;
 const DEFAULTS=window.ATLAS_CATALOG;
 const CURATED_SCENES=window.ATLAS_CURATED_SCENES||{};
+// Editorial chapter lists always come from published files, not the cached IndexedDB character collection.
+const CHAPTER_CAST=window.ATLAS_CHAPTER_CAST||{};
+let sceneTab='appearing';
+const EDITION='V7';
+const CAST_EXPECTED=143;
+const CAST_LOADED=Object.keys(CHAPTER_CAST).filter(k=>/^(got|acok):\d+$/.test(k)).length;
 const STORE='atlas-v3';
 let characters=[];
 let read={book:'acok',chapter:55,mode:'scene',finished:false};
@@ -59,7 +65,16 @@ const sceneHas=c=>{
  const key=chapterKey(read.book,read.chapter);
  return (c.scenes||[]).includes(key)||isPOV(c);
 };
-const sceneVisible=c=>sceneHas(c) && (isKnown(c)||isPOV(c));
+const castFor=()=>CHAPTER_CAST[chapterKey(read.book,read.chapter)]||null;
+const currentIds=(group)=>{
+ const data=castFor();
+ if(!data)return group==='appearing'?characters.filter(c=>sceneHas(c)&&(isKnown(c)||isPOV(c))).map(c=>c.id):[];
+ // Preserve manual associations made in the editor alongside the reviewed published cast.
+ const ids=(data[group]||[]).slice();
+ if(group==='appearing')for(const c of characters){if((c.scenes||[]).includes(chapterKey(read.book,read.chapter))&&!ids.includes(c.id))ids.push(c.id);}
+ return ids;
+};
+const sceneVisible=c=>currentIds(sceneTab).includes(c.id) && (sceneTab==='appearing'||isKnown(c));
 
 const notify=message=>{
  const el=$('toast');el.textContent=message;el.classList.remove('hidden');
@@ -96,14 +111,23 @@ function renderReader(){
   el.classList.toggle('active',read.mode===mode);
   el.setAttribute('aria-pressed',String(read.mode===mode));
  }
- $('directoryTitle').textContent=read.mode==='scene'?'Neste capítulo':read.mode==='known'?'Conhecidos até aqui':'Acervo de retratos';
+ $('directoryTitle').textContent=read.mode==='scene'?(sceneTab==='appearing'?'Em cena':'Citados importantes'):read.mode==='known'?'Conhecidos até aqui':'Acervo de retratos';
+ const currentCast=castFor();
+ $('sceneSubtabs').classList.toggle('hidden',read.mode!=='scene');
+ $('presentCount').textContent=currentCast ? currentCast.appearing.length+currentCast.unpicturedAppearing.length : currentIds('appearing').length;
+ $('mentionCount').textContent=currentCast ? currentCast.mentioned.length+currentCast.unpicturedMentioned.length : '—';
+ for(const [tab,id] of [['appearing','showPresent'],['mentioned','showMentions']]){
+  $(id).classList.toggle('selected',sceneTab===tab);$(id).setAttribute('aria-pressed',String(sceneTab===tab));
+  $(id).disabled=!currentCast&&tab==='mentioned';
+ }
  $('finishedToggle').checked=read.finished;
  $('spoilerNotice').textContent=read.finished
   ?'Capítulo concluído: fichas até este capítulo liberadas.'
-  :'Capítulo em andamento: informações novas deste capítulo permanecem ocultas. A lista de participantes, quando cadastrada, pode antecipar quem aparece.';
+  :'Capítulo em andamento: informações novas deste capítulo permanecem ocultas. A relação de participantes de um capítulo em andamento pode antecipar quem aparece nele.';
  const key=chapterKey(read.book,read.chapter);
  if(read.mode==='scene'){
-  $('curationNotice').textContent=CURATED_SCENES[key]||'Elenco ainda não revisado: mostramos o narrador, quando houver retrato. Não é uma lista completa.';
+  const cast=castFor();
+  $('curationNotice').textContent=cast?(sceneTab==='appearing'?'Personagens identificados em cena nesta revisão; figurantes e participações menores podem faltar.':'Citações selecionadas por importância narrativa; menções ocasionais foram omitidas.'):(CURATED_SCENES[key]||'Capítulo ainda não revisado: são mostrados somente personagens já associados manualmente ou o narrador. A lista não é completa.');
  }else if(read.mode==='known'){
   $('curationNotice').textContent='Fichas liberadas progressivamente por ponto de leitura; etapas ainda em revisão.';
  }else{
@@ -116,26 +140,82 @@ function portraitHTML(c,p,extraClass=''){
  return (p.thumb||p.portrait) ? `<img class="portrait ${extraClass}" src="${p.thumb||p.portrait}" loading="lazy" alt="Retrato literário de ${esc(p.name)}" />`:
  `<div class="portrait-placeholder ${extraClass}" role="img" aria-label="Retrato ainda não adicionado"><span>${esc(initials(c.name))}</span></div>`;
 }
+function safeSceneProfile(c){
+ const p=profile(c);
+ // When a character is merely cited before their debut, do not disclose later biographical details.
+ if(read.mode==='scene'&&!isKnown(c)){
+  if(sceneTab==='mentioned')return {name:c.name,house:'',age:'',role:'',note:'Retrato e ficha liberados quando o personagem aparecer na leitura.',appearance:'',portrait:'',thumb:''};
+  return {...p,house:'',age:'',role:'',note:'Primeira aparição ou ficha ainda não liberada neste ponto da leitura.',appearance:''};
+ }
+ return p;
+}
 function renderGallery(){
  const q=$('searchInput').value.trim().toLocaleLowerCase('pt-BR');
- const list=characters.filter(c=>read.mode==='archive'?Boolean(profile(c).portrait):read.mode==='known'?isKnown(c):sceneVisible(c))
- .filter(c=>{const p=profile(c);return `${p.name} ${c.name} ${p.house} ${p.role}`.toLocaleLowerCase('pt-BR').includes(q);})
- .sort((a,b)=>read.mode==='scene'?Number(isPOV(b))-Number(isPOV(a))||a.name.localeCompare(b.name,'pt-BR'):a.name.localeCompare(b.name,'pt-BR'));
+ const groupIds=read.mode==='scene'?currentIds(sceneTab):[];
+ const list=characters.filter(c=>read.mode==='archive'?Boolean(profile(c).portrait):read.mode==='known'?isKnown(c):groupIds.includes(c.id) && (sceneTab==='appearing'||isKnown(c)))
+ .filter(c=>{const p=safeSceneProfile(c);return `${p.name} ${c.name} ${p.house} ${p.role}`.toLocaleLowerCase('pt-BR').includes(q);})
+ .sort((a,b)=>read.mode==='scene'?Number(isPOV(b))-Number(isPOV(a))||groupIds.indexOf(a.id)-groupIds.indexOf(b.id):a.name.localeCompare(b.name,'pt-BR'));
  $('characterCount').textContent=list.length;
  $('gallery').innerHTML=list.length?list.map(c=>{
-  const p=profile(c);
+  const p=safeSceneProfile(c);
   return `<button type="button" class="character-card" data-person="${esc(c.id)}" aria-label="Ver ficha de ${esc(p.name)}">
-   ${portraitHTML(c,p)}<div class="card-body"><div class="card-subtitle">${esc(p.house||'Sem casa informada')}</div><div class="card-name">${esc(p.name)}</div><div class="card-age">${esc([p.age,p.role].filter(Boolean).join(' · ')||'Idade não informada')}</div><p class="card-note">${esc(p.note||'Descrição ainda não cadastrada.')}</p><div class="card-foot"><span>VER FICHA</span><span>↗</span></div></div></button>`;
- }).join(''):`<div class="empty"><div class="empty-icon">✧</div><h3>${q?'Nenhum resultado':'Este capítulo aguarda curadoria'}</h3><p>${q?'Tente outro nome ou família.':read.mode==='scene'?'Os participantes ainda não foram registrados neste capítulo. Veja “Conhecidos até aqui” ou a coleção de retratos.':'Nenhum personagem disponível para este filtro.'}</p></div>`;
+   ${portraitHTML(c,p)}<div class="card-body"><div class="card-subtitle">${esc(p.house||'Personagem')}</div><div class="card-name">${esc(p.name)}</div><div class="card-age">${esc([p.age,p.role].filter(Boolean).join(' · ')||'Dados em atualização')}</div><p class="card-note">${esc(p.note||'Descrição ainda não cadastrada.')}</p><div class="card-foot"><span>VER FICHA</span><span>↗</span></div></div></button>`;
+ }).join(''):`<div class="empty"><div class="empty-icon">✧</div><h3>${q?'Nenhum resultado':read.mode==='scene'&&sceneTab==='mentioned'?'Nenhuma citação com retrato liberado':read.mode==='scene'&&castFor()?'Sem retratos para esta cena':'Este capítulo aguarda curadoria'}</h3><p>${q?'Tente outro nome ou família.':read.mode==='scene'?'Personagens que ainda não têm retrato podem aparecer logo abaixo; nos capítulos não revisados, utilize “Conhecidos até aqui”.':'Nenhum personagem disponível para este filtro.'}</p></div>`;
+ const cast=read.mode==='scene'?castFor():null;
+ const other=cast ? (sceneTab==='appearing'?cast.unpicturedAppearing:cast.unpicturedMentioned).slice() : [];
+ // The important mentioned characters who have a portrait but a later debut remain text-only.
+ if(cast&&sceneTab==='mentioned')for(const id of cast.mentioned){const c=characters.find(x=>x.id===id);if(c&&!isKnown(c)&&!other.includes(c.name))other.push(c.name);}
+ const matched=other.filter(name=>name.toLocaleLowerCase('pt-BR').includes(q));
+ const missing=$('unpictured');
+ missing.classList.toggle('hidden',!matched.length);
+ missing.innerHTML=matched.length?`<h3>${sceneTab==='appearing'?'Também aparecem, sem retrato':'Citações sem retrato liberado'}</h3><div class="name-chips">${matched.map(name=>`<span class="name-chip">${esc(name)}</span>`).join('')}</div><p>Estes nomes fazem parte do capítulo, mas ainda não têm imagem disponível nesta etapa do atlas.</p>`:'';
+ const foot=$('castFootnote');
+ foot.classList.toggle('hidden',read.mode!=='scene');
+ foot.textContent=cast?(sceneTab==='appearing'?'Participações baseadas na lista de personagens do capítulo. Sonhos e visões não contam como aparição física.':'Citações relevantes selecionadas entre as menções listadas na referência literária.'): 'Capítulo não revisado: aparições e citações ainda incompletas.';
+ if(cast&&sceneTab==='appearing'&&(cast.visions.length||cast.unpicturedVisions.length)){
+  const names=cast.visions.map(id=>characters.find(c=>c.id===id)?.name).filter(Boolean).concat(cast.unpicturedVisions);
+  missing.classList.remove('hidden');
+  missing.innerHTML+=`<div class="vision-group"><h3>Em sonho ou visão, não em cena</h3><div class="name-chips">${names.map(name=>`<span class="name-chip vision-chip">${esc(name)}</span>`).join('')}</div></div>`;
+ }
  document.querySelectorAll('[data-person]').forEach(b=>b.addEventListener('click',()=>viewPerson(b.dataset.person)));
 }
 
-function render(){renderReader();renderGallery();saveProgress();}
-function moveChapter(amount){read.chapter=Math.max(0,Math.min(chaptersOf(read.book).length-1,read.chapter+amount));read.finished=false;read.mode='scene';render();}
+function renderBuildHealth(){
+ const status=$('buildHealth');
+ if(status)status.textContent=`${CAST_LOADED}/${CAST_EXPECTED} capítulos I–II · ${EDITION}`;
+ const diagnostic=$('updateDiag');
+ if(diagnostic){
+  diagnostic.textContent=CAST_LOADED===CAST_EXPECTED?
+   `${EDITION} ativa. Base editorial: ${CAST_LOADED}/${CAST_EXPECTED} capítulos dos livros I e II. O progresso e os retratos locais são preservados.`:
+   `ATENÇÃO: ${EDITION} carregou apenas ${CAST_LOADED}/${CAST_EXPECTED} capítulos. Os arquivos no navegador ou no GitHub estão desatualizados; use “Recarregar arquivos”.`;
+ }
+}
+async function verifyPublishedFiles(){
+ const diagnostic=$('updateDiag');if(!diagnostic)return;
+ diagnostic.textContent='Conferindo arquivos publicados…';
+ try{
+  const reg=await navigator.serviceWorker?.getRegistration();
+  if(reg)await reg.update();
+  const [a,b]=await Promise.all([
+   fetch('./index.html?atlas_check='+Date.now(),{cache:'no-store'}),
+   fetch('./chapters.js?atlas_check='+Date.now(),{cache:'no-store'})
+  ]);
+  const [html,cast]=await Promise.all([a.text(),b.text()]);
+  const serverHtml=a.ok&&html.includes('V7');
+  const serverCast=b.ok&&cast.includes('window.ATLAS_CHAPTER_CAST=')&&cast.includes('"acok:69"');
+  diagnostic.textContent=`Instalado: ${EDITION}, capítulos ${CAST_LOADED}/${CAST_EXPECTED}. GitHub: página ${serverHtml?'V7':'não identificada como V7'}; base editorial ${serverCast?'disponível':'não encontrada'}. ${(!serverHtml||!serverCast)?'Confirme que os arquivos foram enviados à raiz e publicados.':'Se a galeria ainda estiver antiga, toque em “Recarregar arquivos”.'}`;
+ }catch(e){diagnostic.textContent=`Instalado: ${EDITION}, capítulos ${CAST_LOADED}/${CAST_EXPECTED}. Não consegui consultar o GitHub agora. Conecte o iPhone à internet e tente novamente.`;}
+}
+function reloadPublishedFiles(){
+ const url=new URL(location.href);url.searchParams.set('atlas_atualizar',EDITION+'-'+Date.now());
+ location.assign(url.href);
+}
+function render(){renderReader();renderGallery();renderBuildHealth();saveProgress();}
+function moveChapter(amount){read.chapter=Math.max(0,Math.min(chaptersOf(read.book).length-1,read.chapter+amount));read.finished=false;read.mode='scene';sceneTab='appearing';render();}
 function modal(id,show){$(id).classList.toggle('hidden',!show);document.body.style.overflow=show?'hidden':'';}
 function closeAll(){for(const id of ['viewOverlay','editOverlay','manageOverlay'])$(id).classList.add('hidden');document.body.style.overflow='';}
 function viewPerson(id){
- const c=characters.find(x=>x.id===id);if(!c)return;const p=profile(c);
+ const c=characters.find(x=>x.id===id);if(!c)return;const p=safeSceneProfile(c);
  $('viewInner').innerHTML=`${p.portrait?`<img class="view-portrait" src="${p.portrait}" alt="Retrato literário de ${esc(p.name)}" />`:`<div class="view-placeholder">${esc(initials(c.name))}</div>`}<div class="view-text"><div class="micro">${esc(p.house||'CASA NÃO INFORMADA')}</div><h2 id="viewTitle">${esc(p.name)}</h2><div class="view-age">${esc([p.age,p.role].filter(Boolean).join(' · ')||'Idade não informada')}</div>${p.appearance?`<p><strong>Aparência:</strong> ${esc(p.appearance)}</p>`:''}<p>${esc(p.note||'Ainda não há notas sobre este personagem.')}</p><button class="view-edit" id="editFromView">Editar ficha ou retrato</button></div>`;
  $('editFromView').addEventListener('click',()=>{closeAll();openEditor(id);});modal('viewOverlay',true);
 }
@@ -224,10 +304,12 @@ async function importBackup(event){
  finally{event.target.value='';}
 }
 function installHandlers(){
- $('bookSelect').addEventListener('change',event=>{read.book=event.target.value;read.chapter=0;read.finished=false;read.mode='scene';render();});
- $('chapterSelect').addEventListener('change',event=>{read.chapter=Number(event.target.value);read.finished=false;read.mode='scene';render();});
+ $('bookSelect').addEventListener('change',event=>{read.book=event.target.value;read.chapter=0;read.finished=false;read.mode='scene';sceneTab='appearing';render();});
+ $('chapterSelect').addEventListener('change',event=>{read.chapter=Number(event.target.value);read.finished=false;read.mode='scene';sceneTab='appearing';render();});
  $('prevBtn').addEventListener('click',()=>moveChapter(-1));$('nextBtn').addEventListener('click',()=>moveChapter(1));
  $('sceneMode').addEventListener('click',()=>{read.mode='scene';render();});
+ $('showPresent').addEventListener('click',()=>{sceneTab='appearing';render();});
+ $('showMentions').addEventListener('click',()=>{sceneTab='mentioned';render();});
  $('knownMode').addEventListener('click',()=>{read.mode='known';render();});
  $('allMode').addEventListener('click',()=>{if(!confirm('A coleção completa contém retratos e nomes de capítulos futuros. Abrir todos os retratos?'))return;read.mode='archive';render();});
  $('finishedToggle').addEventListener('change',event=>{read.finished=event.target.checked;render();});
@@ -242,6 +324,8 @@ function installHandlers(){
  $('deleteCharacter').addEventListener('click',async()=>{const c=characters.find(x=>x.id===editId);if(!c||!confirm(`Excluir ${c.name} e o retrato associado?`))return;characters=characters.filter(x=>x.id!==editId);await save();closeAll();render();notify('Personagem excluído.');});
  $('newCharacter').addEventListener('click',()=>{closeAll();openEditor();});
  $('exportBtn').addEventListener('click',exportBackup);$('importFile').addEventListener('change',importBackup);
+ $('checkUpdateBtn')?.addEventListener('click',verifyPublishedFiles);
+ $('reloadAppBtn')?.addEventListener('click',reloadPublishedFiles);
  $('resetData').addEventListener('click',async()=>{if(!confirm('Restaurar o acervo original de 67 retratos? Suas edições e imagens adicionais serão perdidas. Exporte um backup primeiro.'))return;characters=clone(DEFAULTS);await save();closeAll();render();notify('Acervo original restaurado.');});
 }
 async function start(){
@@ -262,7 +346,16 @@ async function start(){
  }
  catch(e){characters=clone(DEFAULTS);$('saveIndicator').textContent='armazenamento indisponível';notify('Seu navegador bloqueou o armazenamento local.');console.error(e);}
  render();
- if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'))navigator.serviceWorker.register('./sw.js').catch(console.warn);
+ if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1')){
+  let firstController=navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   if(!firstController)return; // first install: no automatic reload
+   const stamp='atlas-auto-reloaded-v7';
+   try{if(sessionStorage.getItem(stamp))return;sessionStorage.setItem(stamp,'1');}catch(e){}
+   reloadPublishedFiles();
+  });
+  navigator.serviceWorker.register('./sw.js').then(r=>r.update()).catch(console.warn);
+ }
 }
 start();
 })();

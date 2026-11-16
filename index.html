@@ -11,9 +11,9 @@
  <link rel="icon" href="icon-192.png" />
  <link rel="apple-touch-icon" href="icon-192.png" />
  <link rel="manifest" href="manifest.webmanifest" />
- <link rel="stylesheet" href="style.css" />
+ <link rel="stylesheet" href="style.css?v=v7-20261116" />
  <title>Atlas de Westeros</title>
- <script src="data.js" defer></script><script src="catalog.js" defer></script><script src="chapters.js" defer></script><script src="app.js" defer></script>
+ <script src="data.js?v=v7-20261116" defer></script><script src="catalog.js?v=v7-20261116" defer></script><script src="chapters.js?v=v7-20261116" defer></script><script src="app.js?v=v7-20261116" defer></script>
 </head>
 <body>
  <div id="app" class="app">
@@ -35,7 +35,7 @@
     </section>
     <p class="footer-quote">“O inverno está chegando.” <span>— Casa Stark</span></p>
   </main>
-  <footer class="site-footer">UM ATLAS PARTICULAR · V6 · LIVROS I–II REVISADOS</footer>
+  <footer class="site-footer">UM ATLAS PARTICULAR · V7 · <span id="buildHealth">verificando base…</span></footer>
  </div>
  <div class="overlay hidden" id="viewOverlay" role="dialog" aria-modal="true" aria-labelledby="viewTitle"><div class="dialog view-dialog"><button class="close-dialog" id="viewClose" aria-label="Fechar">×</button><div id="viewInner"></div></div></div>
  <div class="overlay hidden" id="editOverlay" role="dialog" aria-modal="true" aria-labelledby="editDialogTitle"><div class="dialog edit-dialog"><button class="close-dialog" id="editClose" aria-label="Fechar">×</button><div class="dialog-heading"><span class="micro">BIBLIOTECA PARTICULAR</span><h2 id="editDialogTitle">Editar personagem</h2></div>
@@ -50,7 +50,7 @@
      <div class="form-actions"><button type="button" class="danger-action hidden" id="deleteCharacter">Excluir</button><button type="submit" class="primary-action">Salvar personagem</button></div>
    </form>
  </div></div>
- <div class="overlay hidden" id="manageOverlay" role="dialog" aria-modal="true" aria-labelledby="manageTitle"><div class="dialog manage-dialog"><button class="close-dialog" id="manageClose" aria-label="Fechar">×</button><div class="dialog-heading"><span class="micro">ADMINISTRAÇÃO DO ATLAS</span><h2 id="manageTitle">Sua biblioteca</h2></div><p class="muted">Os 67 retratos originais já estão incluídos no aplicativo. Somente as alterações feitas por você ficam guardadas neste aparelho.</p><div class="admin-actions"><button id="newCharacter" class="primary-action">+ Novo personagem</button><button id="exportBtn" class="secondary-action">Exportar backup</button><label class="secondary-action file-button">Importar backup<input type="file" accept=".json,application/json" id="importFile" /></label></div><div class="notice"><strong>Atenção:</strong> instale primeiro na Tela de Início e depois adicione os retratos. Os dados do Safari e os do app instalado podem ser separados. As aparições por capítulo estão em curadoria; as listas parciais são sinalizadas. O backup permite transferir sua coleção.</div><h3>Personagens cadastrados</h3><p class="muted" id="manageNotice"></p><div class="manage-list" id="manageList"></div><button id="resetData" class="danger-link">Restaurar acervo original</button></div></div>
+ <div class="overlay hidden" id="manageOverlay" role="dialog" aria-modal="true" aria-labelledby="manageTitle"><div class="dialog manage-dialog"><button class="close-dialog" id="manageClose" aria-label="Fechar">×</button><div class="dialog-heading"><span class="micro">ADMINISTRAÇÃO DO ATLAS</span><h2 id="manageTitle">Sua biblioteca</h2></div><p class="muted">Os 67 retratos originais já estão incluídos no aplicativo. Somente as alterações feitas por você ficam guardadas neste aparelho.</p><div class="admin-actions"><button id="newCharacter" class="primary-action">+ Novo personagem</button><button id="exportBtn" class="secondary-action">Exportar backup</button><label class="secondary-action file-button">Importar backup<input type="file" accept=".json,application/json" id="importFile" /></label></div><div class="update-box"><strong>Versão e atualização</strong><p id="updateDiag" aria-live="polite">Verificando os arquivos do Atlas…</p><div class="update-actions"><button class="secondary-action" id="checkUpdateBtn" type="button">Conferir publicação</button><button class="secondary-action" id="reloadAppBtn" type="button">Recarregar arquivos</button></div></div><div class="notice"><strong>Atenção:</strong> instale primeiro na Tela de Início e depois adicione os retratos. Os dados do Safari e os do app instalado podem ser separados. As aparições por capítulo estão em curadoria; as listas parciais são sinalizadas. O backup permite transferir sua coleção.</div><h3>Personagens cadastrados</h3><p class="muted" id="manageNotice"></p><div class="manage-list" id="manageList"></div><button id="resetData" class="danger-link">Restaurar acervo original</button></div></div>
  <div class="toast hidden" id="toast" role="status"></div>
 </body>
 </html>

@@ -8,3 +8,27 @@
 .mode-switch{grid-template-columns:1fr 1fr 1fr}
 .mode-switch button{font-size:11px;line-height:1.25;min-height:44px}
 @media(max-width:420px){.mode-switch button{font-size:10px;padding:11px 3px}}
+
+/* v4 — cast entries: in-scene versus plot-relevant mentions */
+.scene-subtabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0 13px}
+.scene-subtabs button{background:#172326;border:1px solid #465053;color:#c3c8c4;border-radius:8px;min-height:44px;padding:10px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.scene-subtabs button.selected{border-color:#c9ae77;background:#c8a86b1d;color:#f5dfac}
+.scene-subtabs button:disabled{opacity:.4}
+.tab-counter{font-size:11px;font-weight:400;margin-left:5px;color:#ad9b78}
+.unpictured{border:1px solid #4d4c43;border-radius:10px;background:#ffffff04;padding:17px;margin-top:18px}
+.unpictured h3{font:20px var(--serif);color:#e4d6b4;margin:0 0 13px}
+.unpictured p{font-size:11px;color:#a4aaa7;line-height:1.6;margin:13px 0 0}
+.name-chips{display:flex;flex-wrap:wrap;gap:8px}
+.name-chip{display:inline-flex;background:#252e2f;border:1px solid #515a57;color:#e0dfd7;font-size:12px;padding:8px 10px;border-radius:6px}
+.vision-group{margin-top:17px;padding-top:15px;border-top:1px solid #495150}
+.vision-group h3{font-size:16px}
+.vision-chip{color:#c7c9d4;border-color:#6a6a80;background:#34354155}
+.cast-footnote{color:#899490;font-size:11px;line-height:1.6;margin:14px 0 0}
+@media(max-width:420px){.scene-subtabs button{font-size:11px}.name-chip{font-size:11px}}
+
+/* V7 — diagnóstico e atualização sem apagar armazenamento local */
+.update-box{margin-top:16px;padding:15px;background:#111b1f;border:1px solid #5e5644;border-radius:8px;}
+.update-box strong{color:var(--goldlight);font-size:14px;}
+.update-box p{font-size:12px;color:#c7cfc8;line-height:1.55;margin:9px 0 12px;overflow-wrap:anywhere;}
+.update-actions{display:flex;flex-wrap:wrap;gap:8px;}
+.update-actions .secondary-action{flex:1 1 135px;padding:11px 9px;cursor:pointer;}
